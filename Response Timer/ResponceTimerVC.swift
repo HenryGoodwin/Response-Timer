@@ -9,8 +9,12 @@
 import UIKit
 import iAd
 
-class ResponceTimerVC: UIViewController, ADBannerViewDelegate {
-
+class ResponceTimerVC: UIViewController, ADBannerViewDelegate, ADInterstitialAdDelegate {
+    
+    var interAd = ADInterstitialAd()
+    var interAdView: UIView = UIView()
+    var closeButton = UIButton(type: UIButtonType.System) as UIButton
+    
     var timer:NSTimer = NSTimer()
     var startTime = NSTimeInterval()
     
@@ -28,6 +32,7 @@ class ResponceTimerVC: UIViewController, ADBannerViewDelegate {
     var strFrac: String!
     
     var score: Int!
+    var rep = 0
     
     @IBOutlet weak var label: UILabel!
     @IBOutlet weak var startStopBtn: UIButton!
@@ -52,11 +57,22 @@ class ResponceTimerVC: UIViewController, ADBannerViewDelegate {
         
         label.hidden = true
         
+        closeButton.frame = CGRectMake(20, 80, 25, 25)
+        closeButton.layer.cornerRadius = closeButton.frame.size.width/2
+        closeButton.layer.masksToBounds = true
+        closeButton.setTitle("x", forState: .Normal)
+        closeButton.setTitleColor(UIColor.blackColor(), forState: .Normal)
+        closeButton.backgroundColor = UIColor.whiteColor()
+        closeButton.layer.borderColor = UIColor.blackColor().CGColor
+        closeButton.layer.borderWidth = 1
+        closeButton.addTarget(self, action: #selector(ResponceTimerVC.close(_:)), forControlEvents: UIControlEvents.TouchDown)
+
+        
         let fractionDefults = NSUserDefaults.standardUserDefaults()
         let secondDefults = NSUserDefaults.standardUserDefaults()
         let highscoreDefults = NSUserDefaults.standardUserDefaults()
         
-        if (fractionDefults.valueForKey("Mil") != nil){
+        if (fractionDefults.valueForKey("Miliseconds") != nil){
             
             high = highscoreDefults.valueForKey("HighScore") as! Int!
             strSecs = secondDefults.valueForKey("Seconds") as! String
@@ -70,6 +86,45 @@ class ResponceTimerVC: UIViewController, ADBannerViewDelegate {
     override func didReceiveMemoryWarning() {
         super.didReceiveMemoryWarning()
         // Dispose of any resources that can be recreated.
+    }
+    
+    func close(sender: UIButton) {
+        closeButton.removeFromSuperview()
+        interAdView.removeFromSuperview()
+        adBannerView?.hidden = false
+    }
+    
+    func loadAd() {
+        print("load ad")
+        interAd = ADInterstitialAd()
+        interAd.delegate = self
+    }
+    
+    func interstitialAdDidLoad(interstitialAd: ADInterstitialAd!) {
+        print("ad did load")
+        
+        interAdView = UIView()
+        interAdView.frame = self.view.bounds
+        view.addSubview(interAdView)
+        
+        interAd.presentInView(interAdView)
+        UIViewController.prepareInterstitialAds()
+        
+        interAdView.addSubview(closeButton)
+        rep = 0
+    }
+    
+    func interstitialAdDidUnload(interstitialAd: ADInterstitialAd!) {
+        
+    }
+    
+    func interstitialAd(interstitialAd: ADInterstitialAd!, didFailWithError error: NSError!) {
+        print("failed to receive")
+        print(error.localizedDescription)
+        
+        closeButton.removeFromSuperview()
+        interAdView.removeFromSuperview()
+        
     }
     
     func startFlash() {
@@ -169,15 +224,23 @@ class ResponceTimerVC: UIViewController, ADBannerViewDelegate {
     }
     
     @IBAction func clear(sender: UIButton) {
+        if rep != 3 {
+        rep = rep + 1
+        }
         
         label.text = "00:00"
         startStopBtn.enabled = true
         startStopBtn.alpha = OPAQUE
-        
         clearBtn.enabled = false
         clearBtn.alpha = DIM_ALPHA
-        
         label.hidden = true
+        
+        print(rep)
+        if rep == 3 {
+            adBannerView?.hidden = true
+            loadAd()
+        }
+
         
     }
 
